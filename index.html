@@ -1,275 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Idle Clicker – Minimal</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Island Survival Prototype</title>
   <style>
-    :root { --bg:#0f0f12; --panel:#16161a; --muted:#9b9ba1; --text:#eaeaf0; --accent:#4f8cff; --good:#2ecc71; --bad:#ff5252; }
-    * { box-sizing: border-box; }
-    body { margin:0; font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
-    .wrap { max-width: 860px; margin: 32px auto; padding: 0 16px; }
-    h1 { font-size: 28px; margin: 0 0 8px; }
-    .muted { color: var(--muted); }
-    .grid { display:grid; gap:16px; grid-template-columns: 1fr; }
-    @media (min-width: 800px){ .grid { grid-template-columns: 1fr 1fr; } }
-    .card { background:var(--panel); border:1px solid #1f1f25; border-radius:16px; padding:16px; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
-    .big { font-size: 36px; font-weight: 700; letter-spacing: .3px; }
-    button { cursor:pointer; border:1px solid #2a2a33; background:#1c1c22; color:var(--text); border-radius:12px; padding:10px 14px; font-weight:600; transition:.15s ease; }
-    button:hover { transform: translateY(-1px); border-color:#3a3a46; }
-    button:disabled { opacity:.5; cursor:not-allowed; }
-    .row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-    .spacer { height: 8px; }
-    .price { color: var(--muted); font-variant-numeric: tabular-nums; }
-    .good { color: var(--good); }
-    .bad { color: var(--bad); }
-    details { border-top:1px dashed #2a2a33; margin-top:12px; padding-top:12px; }
-    code { background:#111116; padding:2px 6px; border-radius:6px; }
-    .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" on; }
+    body { font-family: sans-serif; background:#f0f0f5; margin:20px; }
+    h1 { margin-bottom:5px; }
+    .stats { margin-bottom: 15px; }
+    .stats div { margin: 3px 0; }
+    button { margin: 4px; padding: 10px 15px; }
+    #log { background:#fff; border:1px solid #ccc; padding:10px; height:150px; overflow:auto; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Idle Clicker <span class="muted">– minimal, no graphics</span></h1>
-    <p class="muted">Click, buy upgrades, earn while idle. Auto‑saves locally.</p>
-
-    <div class="grid">
-      <section class="card" aria-live="polite">
-        <div class="row" style="justify-content:space-between; align-items:baseline;">
-          <div>
-            <div class="muted">Coins</div>
-            <div id="coins" class="big mono">0.00</div>
-          </div>
-          <div>
-            <div class="muted">Income / sec</div>
-            <div id="cps" class="big mono">0.00</div>
-          </div>
-        </div>
-
-        <div class="spacer"></div>
-        <button id="btnWork" style="width:100%; font-size:20px; padding:16px;">Work (+<span id="clickPower">1</span>)</button>
-        <div class="muted">Tip: hold the spacebar to click.</div>
-
-        <details>
-          <summary>Save, load & export</summary>
-          <div class="spacer"></div>
-          <div class="row">
-            <button id="btnSave">Save now</button>
-            <button id="btnReset" title="Deletes your save">Hard reset</button>
-            <button id="btnExport">Export save</button>
-            <button id="btnImport">Import save</button>
-          </div>
-          <div class="spacer"></div>
-          <textarea id="io" rows="3" style="width:100%; background:#101014; color:var(--text); border:1px solid #2a2a33; border-radius:8px; padding:8px;" placeholder="Paste save data here for Import or copy after Export..."></textarea>
-          <div id="msg" class="muted" role="status" aria-live="polite"></div>
-        </details>
-
-        <details>
-          <summary>Stats</summary>
-          <div class="spacer"></div>
-          <div class="muted mono" id="stats"></div>
-        </details>
-      </section>
-
-      <section class="card">
-        <h2 style="margin-top:0;">Upgrades</h2>
-        <div id="shop"></div>
-      </section>
-    </div>
-
-    <p class="muted">Offline progress is capped at 8 hours to keep balance sane.</p>
+  <h1>Island Survival – Prototype v0.1</h1>
+  <div class="stats">
+    <div>Wood: <span id="wood">0</span></div>
+    <div>Stone: <span id="stone">0</span></div>
+    <div>Food: <span id="food">3</span></div>
+    <div>Energy: <span id="energy">10</span></div>
+    <div>Hunger: <span id="hunger">10</span></div>
   </div>
 
+  <div class="actions">
+    <button onclick="gatherWood()">Gather Wood (-1 energy)</button>
+    <button onclick="gatherStone()">Collect Stone (-1 energy)</button>
+    <button onclick="eatFood()">Eat Food (-1 food, +2 hunger)</button>
+    <button onclick="rest()">Rest (+5 energy, -1 hunger)</button>
+  </div>
+
+  <h3>Crafting</h3>
+  <button onclick="craftAxe()">Craft Axe (1 wood + 1 stone)</button>
+
+  <h3>Log</h3>
+  <div id="log"></div>
+
   <script>
-    // ===== Core State =====
     const state = {
-      coins: 0,
-      clickPower: 1,
-      passive: 0, // coins/sec
-      lastSaved: Date.now(),
-      bought: { tools: 0, assistant: 0, manager: 0 },
-      version: 1
+      wood: 0,
+      stone: 0,
+      food: 3,
+      energy: 10,
+      hunger: 10,
+      axe: false
     };
 
-    // ===== Upgrade Catalog =====
-    const catalog = [
-      {
-        id: 'tools',
-        name: 'Better Tools',
-        desc: '+1 per click',
-        baseCost: 15,
-        costScale: 1.15,
-        buy: () => { state.clickPower += 1; },
-      },
-      {
-        id: 'assistant',
-        name: 'Hire Assistant',
-        desc: '+0.1 coins/sec',
-        baseCost: 30,
-        costScale: 1.17,
-        buy: () => { state.passive += 0.1; },
-      },
-      {
-        id: 'manager',
-        name: 'Team Lead',
-        desc: 'Clicks auto +0.5/sec',
-        baseCost: 200,
-        costScale: 1.20,
-        buy: () => { state.passive += 0.5; },
-      }
-    ];
+    function update() {
+      document.getElementById('wood').textContent = state.wood;
+      document.getElementById('stone').textContent = state.stone;
+      document.getElementById('food').textContent = state.food;
+      document.getElementById('energy').textContent = state.energy;
+      document.getElementById('hunger').textContent = state.hunger;
 
-    function costFor(itemId, owned){
-      const it = catalog.find(x=>x.id===itemId);
-      return it.baseCost * Math.pow(it.costScale, owned);
-    }
-
-    // ===== Helpers =====
-    const fmt = n => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-
-    // ===== DOM Refs =====
-    const elCoins = document.getElementById('coins');
-    const elCps = document.getElementById('cps');
-    const elClickPower = document.getElementById('clickPower');
-    const elShop = document.getElementById('shop');
-    const elStats = document.getElementById('stats');
-    const elMsg = document.getElementById('msg');
-    const io = document.getElementById('io');
-
-    // ===== Render =====
-    function render(){
-      elCoins.textContent = fmt(state.coins);
-      elCps.textContent = fmt(state.passive);
-      elClickPower.textContent = fmt(state.clickPower);
-
-      // Stats
-      elStats.textContent = `Click power: ${fmt(state.clickPower)} | Passive: ${fmt(state.passive)} /s | Upgrades – Tools: ${state.bought.tools}, Assistant: ${state.bought.assistant}, Lead: ${state.bought.manager}`;
-
-      // Shop
-      elShop.innerHTML = '';
-      for (const item of catalog){
-        const owned = state.bought[item.id] || 0;
-        const price = costFor(item.id, owned);
-        const can = state.coins >= price;
-        const node = document.createElement('div');
-        node.className = 'card';
-        node.style.padding = '12px';
-        node.innerHTML = `
-          <div class="row" style="justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-weight:700">${item.name} <span class="muted">(owned: ${owned})</span></div>
-              <div class="muted">${item.desc}</div>
-            </div>
-            <div class="row">
-              <div class="price mono">€ ${fmt(price)}</div>
-              <button ${can?'' : 'disabled'} data-id="${item.id}">Buy</button>
-            </div>
-          </div>`;
-        node.querySelector('button').addEventListener('click', () => buy(item.id));
-        elShop.appendChild(node);
+      if (state.hunger <= 0) {
+        log('You starved to death. Game Over.');
+        disableAll();
       }
     }
 
-    // ===== Mechanics =====
-    function clickWork(){
-      state.coins += state.clickPower;
-      dirty();
+    function disableAll(){
+      document.querySelectorAll('button').forEach(btn => btn.disabled = true);
     }
 
-    function tick(dt){ // dt in seconds
-      state.coins += state.passive * dt;
+    function log(msg){
+      const el = document.getElementById('log');
+      el.innerHTML += msg + '<br>';
+      el.scrollTop = el.scrollHeight;
     }
 
-    function buy(id){
-      const owned = state.bought[id] || 0;
-      const price = costFor(id, owned);
-      if (state.coins < price) return;
-      state.coins -= price;
-      state.bought[id] = owned + 1;
-      catalog.find(x=>x.id===id).buy();
-      dirty();
-      render();
+    function gatherWood(){
+      if(state.energy <= 0) return log("Too tired.");
+      state.wood++;
+      state.energy--;
+      state.hunger--;
+      log("You gathered wood.");
+      update();
     }
 
-    // ===== Save / Load =====
-    const KEY = 'idle-minimal-save-v1';
-
-    function save(){
-      state.lastSaved = Date.now();
-      localStorage.setItem(KEY, JSON.stringify(state));
-      flash('Saved');
+    function gatherStone(){
+      if(state.energy <= 0) return log("Too tired.");
+      state.stone++;
+      state.energy--;
+      state.hunger--;
+      log("You collected stone.");
+      update();
     }
 
-    function load(){
-      const raw = localStorage.getItem(KEY);
-      if(!raw) return;
-      try {
-        const data = JSON.parse(raw);
-        Object.assign(state, data);
-        // Offline progress (cap 8h)
-        const seconds = clamp((Date.now() - (data.lastSaved||Date.now()))/1000, 0, 8*3600);
-        const gain = state.passive * seconds;
-        if (gain > 0){
-          state.coins += gain;
-          flash(`While you were away: +€ ${fmt(gain)}`);
-        }
-      } catch {}
+    function eatFood(){
+      if(state.food <= 0) return log("No food left.");
+      state.food--;
+      state.hunger += 2;
+      log("You ate food.");
+      update();
     }
 
-    function exportSave(){ io.value = btoa(unescape(encodeURIComponent(JSON.stringify(state)))); flash('Exported – copy the text above.'); }
-    function importSave(){
-      try {
-        const obj = JSON.parse(decodeURIComponent(escape(atob(io.value.trim()))));
-        Object.assign(state, obj);
-        flash('Imported');
-        render(); save();
-      } catch { flash('Import failed', true); }
+    function rest(){
+      state.energy += 5;
+      state.hunger--;
+      log("You rested.");
+      update();
     }
 
-    function reset(){
-      if (!confirm('This permanently deletes your save. Continue?')) return;
-      localStorage.removeItem(KEY);
-      location.reload();
-    }
-
-    let _dirty = false;
-    function dirty(){ _dirty = true; }
-    function flash(message, bad=false){
-      elMsg.textContent = message;
-      elMsg.style.color = bad ? 'var(--bad)' : 'var(--muted)';
-      setTimeout(()=>{ elMsg.textContent = ''; }, 2500);
-    }
-
-    // ===== Wire Up =====
-    const btnWork = document.getElementById('btnWork');
-    btnWork.addEventListener('click', clickWork);
-    document.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); clickWork(); }});
-
-    document.getElementById('btnSave').addEventListener('click', save);
-    document.getElementById('btnExport').addEventListener('click', exportSave);
-    document.getElementById('btnImport').addEventListener('click', importSave);
-    document.getElementById('btnReset').addEventListener('click', reset);
-
-    // ===== Game Loop =====
-    load();
-    render();
-
-    let last = performance.now();
-    function loop(now){
-      const dt = (now - last) / 1000; // seconds
-      last = now;
-      tick(dt);
-      // Lazy autosave every ~10s when dirty
-      if (_dirty){
-        if (!loop._t) loop._t = 0;
-        loop._t += dt;
-        if (loop._t > 10){ save(); _dirty=false; loop._t = 0; }
+    function craftAxe(){
+      if(state.wood >=1 && state.stone >=1 && !state.axe){
+        state.wood--;
+        state.stone--;
+        state.axe = true;
+        log("You crafted an Axe! Future gathering could be more efficient.");
+      } else if(state.axe){
+        log("You already have an Axe.");
+      } else {
+        log("Not enough materials.");
       }
-      render();
-      requestAnimationFrame(loop);
+      update();
     }
-    requestAnimationFrame(loop);
+
+    update();
   </script>
 </body>
 </html>
